@@ -5,8 +5,10 @@ import com.banking.netBankingBackend.dto.requestDtos.AccountsDto;
 import com.banking.netBankingBackend.dto.ResponseDto;
 import com.banking.netBankingBackend.dto.requestDtos.TransactionDto;
 import com.banking.netBankingBackend.service.IAccountsService;
+import com.banking.netBankingBackend.service.INetBankingService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,11 +21,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 @RequestMapping(path = "/api", produces = {MediaType.APPLICATION_JSON_VALUE})
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class AccountsController {
 
-    @Autowired
-    private IAccountsService accountsService;
+
+    private final IAccountsService accountsService;
+
+    private final INetBankingService  netBankingService;
+
+
 
 
     @PostMapping("/createAccount")
@@ -38,6 +44,7 @@ public class AccountsController {
     public ResponseEntity<ResponseDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
 
 
+        netBankingService.createTransaction(transactionDto);
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200", "Transaction  successful"));
 
     }

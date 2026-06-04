@@ -10,7 +10,7 @@ public class InsufficientBalanceException extends RuntimeException {
 
     public InsufficientBalanceException(String resourceName) {
 
-        super(String.format(resourceName, "ResourceNotFoundException"));
+        super(String.format(resourceName, "InsufficientBalanceException"));
     }
 
 }

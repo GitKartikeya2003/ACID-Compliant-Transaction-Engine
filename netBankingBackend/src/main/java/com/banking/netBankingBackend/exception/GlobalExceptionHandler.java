@@ -67,6 +67,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     }
 
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<ErrorResponseDto> handleSameAccountTransferException(SameAccountTransferException
+                                                                                       exception,
+                                                                               WebRequest webRequest) {
+
+        ErrorResponseDto errorResponseDto = new ErrorResponseDto(
+                webRequest.getDescription(false),   //this is to only get the api path if i would have set
+                // it to true, then we will get more information that
+                // is not needed right now.....
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
+
+    }
+
 
 //    @ExceptionHandler(DataIntegrityViolationException.class)
 //    public ResponseEntity<ErrorResponseDto> handleBadCredentialsException(DataIntegrityViolationException

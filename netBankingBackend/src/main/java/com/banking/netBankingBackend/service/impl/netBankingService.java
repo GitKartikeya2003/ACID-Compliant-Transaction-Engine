@@ -6,6 +6,7 @@ import com.banking.netBankingBackend.entity.AccountEntity;
 import com.banking.netBankingBackend.enums.Status;
 import com.banking.netBankingBackend.exception.InsufficientBalanceException;
 import com.banking.netBankingBackend.exception.ResourceNotFoundException;
+import com.banking.netBankingBackend.exception.SameAccountTransferException;
 import com.banking.netBankingBackend.repository.AccountsRepository;
 import com.banking.netBankingBackend.repository.TransactionRepository;
 import com.banking.netBankingBackend.service.INetBankingService;
@@ -28,6 +29,12 @@ public class netBankingService implements INetBankingService {
     @Override
     @Transactional
     public void createTransaction(TransactionDto transactionDto) {
+
+        if (transactionDto.getFrom_accountNumber()
+                .equals(transactionDto.getTo_AccountNumber())) {
+            throw new SameAccountTransferException("Cannot transfer to the same account");
+        }
+
 
         if (transactionDto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("Transfer amount must be greater than zero");

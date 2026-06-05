@@ -5,13 +5,15 @@ import com.banking.netBankingBackend.dto.requestDtos.TransactionDto;
 import com.banking.netBankingBackend.entity.AccountEntity;
 import com.banking.netBankingBackend.enums.Status;
 import com.banking.netBankingBackend.exception.InsufficientBalanceException;
+import com.banking.netBankingBackend.exception.InvalidTransactionException;
 import com.banking.netBankingBackend.exception.ResourceNotFoundException;
 import com.banking.netBankingBackend.exception.SameAccountTransferException;
 import com.banking.netBankingBackend.repository.AccountsRepository;
 import com.banking.netBankingBackend.repository.TransactionRepository;
 import com.banking.netBankingBackend.service.INetBankingService;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -27,7 +29,8 @@ public class netBankingService implements INetBankingService {
 
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)          // Fixed import + rollbackFor
+    @CacheEvict(value = "accounts", allEntries = true)
     public void createTransaction(TransactionDto transactionDto) {
 
         if (transactionDto.getFrom_accountNumber()
@@ -37,7 +40,7 @@ public class netBankingService implements INetBankingService {
 
 
         if (transactionDto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("Transfer amount must be greater than zero");
+            throw new InvalidTransactionException("Transfer amount must be greater than zero");
         }
 
         AccountEntity fromAccount = accountsRepository.findByAccountNumber(transactionDto.getFrom_accountNumber())
@@ -53,13 +56,15 @@ public class netBankingService implements INetBankingService {
             throw new InsufficientBalanceException("Insufficient balance");
         } else {
 
+            // Perform Transfer
+
             BigDecimal amountToSend = transactionDto.getAmount();
 
             fromAccount.setBalance(fromAccount.getBalance().subtract(amountToSend));
             toAccount.setBalance(toAccount.getBalance().add(amountToSend));
 
-            accountsRepository.save(fromAccount);
-            accountsRepository.save(toAccount);
+//            accountsRepository.save(fromAccount);
+//            accountsRepository.save(toAccount);
 
             transactionLogService.saveTransaction(fromAccount, toAccount, amountToSend, Status.SUCCESS);
 

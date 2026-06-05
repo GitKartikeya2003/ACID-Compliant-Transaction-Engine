@@ -3,20 +3,17 @@ package com.banking.netBankingBackend.controller;
 
 import com.banking.netBankingBackend.dto.requestDtos.AccountsDto;
 import com.banking.netBankingBackend.dto.ResponseDto;
+import com.banking.netBankingBackend.dto.requestDtos.GetBalanceDto;
 import com.banking.netBankingBackend.dto.requestDtos.TransactionDto;
 import com.banking.netBankingBackend.service.IAccountsService;
 import com.banking.netBankingBackend.service.INetBankingService;
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 
 @Controller
@@ -27,9 +24,7 @@ public class AccountsController {
 
     private final IAccountsService accountsService;
 
-    private final INetBankingService  netBankingService;
-
-
+    private final INetBankingService netBankingService;
 
 
     @PostMapping("/createAccount")
@@ -40,6 +35,16 @@ public class AccountsController {
 
     }
 
+    @GetMapping("/get-balance")
+    public ResponseEntity<GetBalanceDto> getBalance(@Valid @RequestParam String accountNo) {
+
+        GetBalanceDto details = accountsService.getBalance(accountNo);
+        return ResponseEntity.status(HttpStatus.OK).body(details);
+
+
+    }
+
+
     @PostMapping("/transaction")
     public ResponseEntity<ResponseDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
 
@@ -48,10 +53,6 @@ public class AccountsController {
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200", "Transaction  successful"));
 
     }
-
-
-
-
 
 
 }

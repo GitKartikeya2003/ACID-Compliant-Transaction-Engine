@@ -67,7 +67,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     }
 
-    @ExceptionHandler(InsufficientBalanceException.class)
+    @ExceptionHandler(SameAccountTransferException.class)
     public ResponseEntity<ErrorResponseDto> handleSameAccountTransferException(SameAccountTransferException
                                                                                        exception,
                                                                                WebRequest webRequest) {
@@ -83,6 +83,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
 
+    }
+
+    @ExceptionHandler(InvalidTransactionException.class)
+    public ResponseEntity<String> handleInvalidTransaction(InvalidTransactionException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
 

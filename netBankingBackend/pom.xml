@@ -89,6 +89,13 @@
 			<artifactId>jackson-datatype-jsr310</artifactId>
 		</dependency>
 
+<!--		Hibernate Envers-->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-envers</artifactId>
+			<version>4.0.5</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -2,6 +2,7 @@ package com.banking.netBankingBackend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.envers.Audited;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @Entity
 @Table(name = "accounts")
+@Audited
 public class AccountEntity implements Serializable {
 
     @Id

@@ -41,7 +41,7 @@ public class AccountsServiceImpl implements IAccountsService {
         AccountEntity account = accountsRepository.findByAccountNumber(accountNo).orElseThrow(
                 () -> new ResourceNotFoundException("Account with account number " + accountNo + " not found"));
 
-       // simulateSlowDbCall();
+        simulateSlowDbCall();
         GetBalanceDto getBalanceDto = new GetBalanceDto();
         getBalanceDto.setBalance(account.getBalance());
         getBalanceDto.setAccountNo(account.getAccountNumber());
@@ -65,13 +65,13 @@ public class AccountsServiceImpl implements IAccountsService {
         return accountNumber;
     }
 
-//    private void simulateSlowDbCall() {
-//        try {
-//            Thread.sleep(500);// 500ms artificial delay
-//        } catch (InterruptedException e) {
-//            Thread.currentThread().interrupt();
-//        }
-//    }
+    private void simulateSlowDbCall() {
+        try {
+            Thread.sleep(500);// 500ms artificial delay
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
 
 
 }

@@ -29,3 +29,11 @@ logging:
     com:
       banking:
         netBankingBackend:
+
+
+
+server:
+  servlet:
+    session:
+      cookie:
+        same-site: strict

@@ -90,6 +90,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDto> handleUserAlreadyExistsException(UserAlreadyExistsException
+                                                                                       exception,
+                                                                               WebRequest webRequest) {
+
+        ErrorResponseDto errorResponseDto = new ErrorResponseDto(
+                webRequest.getDescription(false),   //this is to only get the api path if i would have set
+                // it to true, then we will get more information that
+                // is not needed right now.....
+                HttpStatus.CONFLICT,
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.CONFLICT);
+
+    }
+
+
+
 
 //    @ExceptionHandler(DataIntegrityViolationException.class)
 //    public ResponseEntity<ErrorResponseDto> handleBadCredentialsException(DataIntegrityViolationException

@@ -2,7 +2,9 @@ package com.banking.netBankingBackend.controller;
 
 
 import com.banking.netBankingBackend.dto.ResponseDto;
+import com.banking.netBankingBackend.dto.requestDtos.LoginRequestDto;
 import com.banking.netBankingBackend.dto.requestDtos.UserRegistrationDto;
+import com.banking.netBankingBackend.dto.responseDtos.LoginResponseDto;
 import com.banking.netBankingBackend.service.impl.UserServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,14 @@ public class UserController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseDto("201", "User created successfully"));
 
+
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto dto) {
+        String response =  userService.login(dto);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new LoginResponseDto(response));
 
     }
 

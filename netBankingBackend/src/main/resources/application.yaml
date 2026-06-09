@@ -37,3 +37,12 @@ server:
     session:
       cookie:
         same-site: strict
+
+
+jwt:
+  secret: PEIfqRqW6wNDvapNu3u1zUbey/JM59fi0JnbmSTiFNg=
+  expiration: 86400000
+
+
+
+

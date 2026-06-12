@@ -3,6 +3,7 @@ package com.banking.netBankingBackend.mapper;
 import com.banking.netBankingBackend.dto.requestDtos.UserRegistrationDto;
 import com.banking.netBankingBackend.entity.UserEntity;
 import com.banking.netBankingBackend.enums.Role;
+import com.banking.netBankingBackend.util.AESUtil;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public class UserMapper {
@@ -20,6 +21,8 @@ public class UserMapper {
         userEntity.setPanNumber(registerDto.getPanNumber());
         userEntity.setEmail(registerDto.getEmail());
         userEntity.setRole(Role.USER);
+        userEntity.setEmailHash(AESUtil.hash(registerDto.getEmail()));
+        userEntity.setPhoneHash(AESUtil.hash(registerDto.getPhoneNumber()));
 
     }
 }

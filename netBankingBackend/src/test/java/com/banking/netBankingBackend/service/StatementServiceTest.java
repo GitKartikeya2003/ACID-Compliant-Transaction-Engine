@@ -74,4 +74,5 @@ class StatementServiceTest {
         //This is the right long-term fix anyway — BigDecimal equality should always use compareTo,
         // never assertEquals, because new BigDecimal("500").equals(new BigDecimal("500.00")) is false in Java by design.
     }
+
 }

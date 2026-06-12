@@ -1,5 +1,6 @@
 package com.banking.netBankingBackend.entity;
 
+import com.banking.netBankingBackend.util.AESAttributeConvertor;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.envers.Audited;
@@ -24,7 +25,8 @@ public class AccountEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 20)
+    @Column(nullable = false, unique = true, length = 128)
+    @Convert(converter = AESAttributeConvertor.class)
     private String accountNumber;
 
     @Column(nullable = false)
@@ -40,6 +42,9 @@ public class AccountEntity implements Serializable {
     @LastModifiedDate
     @Column(insertable = false)
     private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private UserEntity user;
 
     @PrePersist
     public void prePersist() {

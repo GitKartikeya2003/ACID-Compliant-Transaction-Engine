@@ -1,11 +1,13 @@
 package com.banking.netBankingBackend.entity;
 
 import com.banking.netBankingBackend.enums.Role;
+import com.banking.netBankingBackend.util.AESAttributeConvertor;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.envers.Audited;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -16,6 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Entity
 @Table(name = "users")
+@Audited
 public class UserEntity {
 
     @Id
@@ -25,10 +28,12 @@ public class UserEntity {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(name = "email", unique = true, nullable = false)        //For Credentials
+    @Column(name = "email", unique = true, nullable = false,length = 255)        //For Credentials
+    @Convert(converter = AESAttributeConvertor.class)
     private String email;
 
     @Column(name = "phone_number", unique = true, nullable = false) //For Credentials
+    @Convert(converter = AESAttributeConvertor.class)
     private String phoneNumber;
 
     @Column(name = "password", nullable = false)
@@ -38,6 +43,7 @@ public class UserEntity {
     private LocalDate dateOfBirth;
 
     @Column(name = "pan_number", unique = true, nullable = false)
+    @Convert(converter = AESAttributeConvertor.class)
     private String panNumber;
 
     @Enumerated(EnumType.STRING)
@@ -54,6 +60,13 @@ public class UserEntity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+
+    @Column(name = "email_hash", unique = true, nullable = true)
+    private String emailHash;
+
+    @Column(name = "phone_hash", unique = true, nullable = true)
+    private String phoneHash;
 
     @PrePersist
     protected void onCreate() {

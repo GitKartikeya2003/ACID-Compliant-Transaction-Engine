@@ -17,6 +17,8 @@ class NetBankingBackendApplicationTests {
 		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Kolkata"));
 		SpringApplication.run(NetBankingBackendApplication.class, args);
 
+
+
 	}
 
 }

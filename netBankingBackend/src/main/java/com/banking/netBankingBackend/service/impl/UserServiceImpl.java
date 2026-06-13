@@ -76,7 +76,7 @@ public class UserServiceImpl {
             Role role = userEntity.getRole();
             log.info("User {} successfully authenticated. Generating JWT token with role: {}", loginRequestDto.getEmail(), role);
 
-            return jwtService.generateToken(loginRequestDto.getEmail(), role);
+            return jwtService.generateToken(emailHash, role);
 
         } else {
             log.warn("Authentication failed for email: {}", loginRequestDto.getEmail());

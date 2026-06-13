@@ -19,15 +19,15 @@ public class JwtServiceImpl {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    public String generateToken(String email, Role role) {
+    public String generateToken(String emailHash, Role role) {
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("email", email);
+        claims.put("email", emailHash);
         claims.put("roles", role);
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(email)
+                .subject(emailHash)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 15)) // 15 mins
                 .signWith(getKey())

@@ -29,6 +29,9 @@ public class AccountEntity implements Serializable {
     @Convert(converter = AESAttributeConvertor.class)
     private String accountNumber;
 
+    @Column(name = "phone_account", unique = true, nullable = true)
+    private String accountHash;
+
     @Column(nullable = false)
     private String name;
 
@@ -44,6 +47,7 @@ public class AccountEntity implements Serializable {
     private LocalDateTime updatedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private UserEntity user;
 
     @PrePersist

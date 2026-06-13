@@ -12,8 +12,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Objects;
 
 
 @Controller
@@ -29,8 +33,9 @@ public class AccountsController {
 
     @PostMapping("/createAccount")
     public ResponseEntity<ResponseDto> createAccount(@Valid @RequestBody AccountsDto accountsDto) {
-
-        accountsService.createAccount(accountsDto);
+        String emailHash = Objects.requireNonNull(
+                SecurityContextHolder.getContext().getAuthentication()).getName();
+        accountsService.createAccount(accountsDto,emailHash);
         return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseDto("201", "Account created successfully"));
 
     }
@@ -54,5 +59,17 @@ public class AccountsController {
 
     }
 
+
+    @GetMapping("/fetch-all-accounts")
+    public ResponseEntity<List<GetBalanceDto>> fetchAllAccounts() {
+
+        String emailHash = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
+
+        List<GetBalanceDto> response = accountsService.getAllAccount(emailHash);
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+
+
+    }
 
 }

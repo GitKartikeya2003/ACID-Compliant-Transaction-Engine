@@ -4,5 +4,5 @@ import com.banking.netBankingBackend.dto.requestDtos.TransactionDto;
 
 public interface INetBankingService {
 
-    public void createTransaction(TransactionDto transactionDto);
+     void createTransaction(TransactionDto transactionDto,String emailHash);
 }

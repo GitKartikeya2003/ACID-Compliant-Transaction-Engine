@@ -53,8 +53,10 @@ public class AccountsController {
     @PostMapping("/transaction")
     public ResponseEntity<ResponseDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
 
+        String emailHash = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
 
-        netBankingService.createTransaction(transactionDto);
+
+        netBankingService.createTransaction(transactionDto,emailHash);
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200", "Transaction  successful"));
 
     }

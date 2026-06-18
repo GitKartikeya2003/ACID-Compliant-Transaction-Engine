@@ -1,7 +1,6 @@
 package com.banking.netBankingBackend.entity.principal;
 
 import com.banking.netBankingBackend.entity.UserEntity;
-import com.banking.netBankingBackend.enums.Role;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -26,7 +25,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority(Role.USER.name()));
+        return Collections.singleton(new SimpleGrantedAuthority(user.getRole().name()));
     }
 
 

@@ -53,6 +53,8 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorizeRequests ->
                 authorizeRequests.requestMatchers("/auth/register","/auth/login")
                         .permitAll()
+                        .requestMatchers("/api/admin/**")
+                        .hasAuthority("ADMIN")
                         .anyRequest()
                         .authenticated());
 

@@ -3,22 +3,26 @@ package com.banking.netBankingBackend.service.impl;
 
 import com.banking.netBankingBackend.dto.requestDtos.TransactionDto;
 import com.banking.netBankingBackend.entity.AccountEntity;
+import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.TransactionCompletedEvent;
+import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.TransactionInsufficientFundsEvent;
 import com.banking.netBankingBackend.entity.UserEntity;
+import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.TransactionPinFailedEvent;
+import com.banking.netBankingBackend.enums.AccountStatus;
 import com.banking.netBankingBackend.enums.Status;
-import com.banking.netBankingBackend.exception.InsufficientBalanceException;
-import com.banking.netBankingBackend.exception.InvalidTransactionException;
-import com.banking.netBankingBackend.exception.ResourceNotFoundException;
-import com.banking.netBankingBackend.exception.SameAccountTransferException;
+import com.banking.netBankingBackend.exception.*;
 import com.banking.netBankingBackend.repository.AccountsRepository;
 import com.banking.netBankingBackend.service.INetBankingService;
 import com.banking.netBankingBackend.util.AESUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -30,11 +34,14 @@ public class netBankingService implements INetBankingService {
 
     private final TransactionLogService transactionLogService;
 
+    private final ApplicationEventPublisher eventPublisher;
+
+    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     @Override
     @Transactional(rollbackFor = Exception.class)          // Fixed import + rollbackFor
     @CacheEvict(value = "accounts", allEntries = true)
-    public void createTransaction(TransactionDto transactionDto, String emailHash) {
+    public void createTransaction(TransactionDto transactionDto, String emailHash, String pin) {
 
 
         if (transactionDto.getFrom_accountNumber()
@@ -59,6 +66,13 @@ public class netBankingService implements INetBankingService {
         AccountEntity fromAccount = accountsRepository.findByAccountHash(fromAccountNoHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
+
+        if(fromAccount.getStatus() == AccountStatus.FROZEN){
+            throw new FrozenAccountException("Your Account has been frozen");
+        }
+
+        BigDecimal balanceBefore = fromAccount.getBalance();
+
         UserEntity user = fromAccount.getUser();
 
         if (user.getEmailHash().compareTo(emailHash) != 0) {
@@ -70,6 +84,14 @@ public class netBankingService implements INetBankingService {
 
         AccountEntity toAccount = accountsRepository.findByAccountHash(toAccountHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+        if(toAccount.getStatus() == AccountStatus.FROZEN){
+            throw new FrozenAccountException("Receiver Account is Frozen");
+        }
+
+
+        log.info("Verifying PIN code for account");
+        verifyTransactionPin(fromAccount, pin);
 
         log.info("Transfer initiated: amount={} from account={} to account={}",
                 transactionDto.getAmount(),
@@ -83,6 +105,15 @@ public class netBankingService implements INetBankingService {
                     fromAccount.getAccountNumber(),
                     fromAccount.getBalance(),
                     transactionDto.getAmount());
+
+            eventPublisher.publishEvent(
+                    TransactionInsufficientFundsEvent.builder()
+                            .account(fromAccount)
+                            .attemptedAmount(transactionDto.getAmount())
+                            .availableBalance(fromAccount.getBalance())
+                            .timestamp(LocalDateTime.now())
+                            .build()
+            );
             throw new InsufficientBalanceException("Insufficient balance");
         } else {
 
@@ -95,6 +126,14 @@ public class netBankingService implements INetBankingService {
 
 
             transactionLogService.saveTransaction(fromAccount, toAccount, amountToSend, Status.SUCCESS);
+            eventPublisher.publishEvent(
+                    new TransactionCompletedEvent(
+                            fromAccount,
+                            amountToSend,
+                            balanceBefore,
+                            LocalDateTime.now()
+                    )
+            );
             log.info("Transfer SUCCESS: amount={} from account={} (new balance={}) to account={} (new balance={})",
                     amountToSend,
                     fromAccount.getAccountNumber(),
@@ -105,6 +144,27 @@ public class netBankingService implements INetBankingService {
         }
 
 
+    }
+
+    // Inside your transfer service, BEFORE processing the transfer
+    public void verifyTransactionPin(AccountEntity account, String enteredPin) {
+
+        if (account.getTransactionPin() == null) {
+            throw new PinNotSetException("Transaction PIN not set for this account");
+        }
+
+        if (!encoder.matches(enteredPin, account.getTransactionPin())) {
+
+            eventPublisher.publishEvent(
+                    TransactionPinFailedEvent.builder()
+                            .account(account)
+                            .failureReason("WRONG_PIN")
+                            .occurredAt(LocalDateTime.now())
+                            .build()
+            );
+
+            throw new InvalidPinException("Invalid transaction PIN");
+        }
     }
 
 

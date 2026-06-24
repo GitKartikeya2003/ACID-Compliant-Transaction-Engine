@@ -1,5 +1,6 @@
 package com.banking.netBankingBackend.entity;
 
+import com.banking.netBankingBackend.enums.AccountStatus;
 import com.banking.netBankingBackend.util.AESAttributeConvertor;
 import jakarta.persistence.*;
 import lombok.*;
@@ -49,6 +50,13 @@ public class AccountEntity implements Serializable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'ACTIVE'")
+    private AccountStatus status = AccountStatus.ACTIVE;
+
+    @Column(name = "transaction_pin")
+    private String transactionPin;
 
     @PrePersist
     public void prePersist() {

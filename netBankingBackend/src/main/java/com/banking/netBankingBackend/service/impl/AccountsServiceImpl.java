@@ -3,8 +3,10 @@ package com.banking.netBankingBackend.service.impl;
 
 import com.banking.netBankingBackend.dto.requestDtos.AccountsDto;
 import com.banking.netBankingBackend.dto.requestDtos.GetBalanceDto;
+import com.banking.netBankingBackend.dto.requestDtos.SetPinDto;
 import com.banking.netBankingBackend.entity.AccountEntity;
 import com.banking.netBankingBackend.entity.UserEntity;
+import com.banking.netBankingBackend.exception.InvalidTransactionException;
 import com.banking.netBankingBackend.exception.ResourceNotFoundException;
 import com.banking.netBankingBackend.mapper.AccountsMapper;
 import com.banking.netBankingBackend.repository.AccountsRepository;
@@ -15,7 +17,9 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +36,9 @@ public class AccountsServiceImpl implements IAccountsService {
 
     @Autowired
     private final UserRepository userRepository;
+
+    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+
 
 
     @Override
@@ -111,6 +118,31 @@ public class AccountsServiceImpl implements IAccountsService {
 
 
         return response;
+    }
+
+
+    @Override
+    @Transactional
+    public void setPin(SetPinDto setPinDto, String emailHash) {
+
+        String hashAccount = AESUtil.hash(setPinDto.getAccountNumber());
+
+        AccountEntity account = accountsRepository.findByAccountHash(hashAccount).orElseThrow(
+                () -> new ResourceNotFoundException("Account number " + setPinDto.getAccountNumber() + " not found")
+        );
+
+        UserEntity user = account.getUser();
+
+        if (user.getEmailHash().compareTo(emailHash) != 0) {
+
+            log.warn("Account no {} is not of user: {}", account.getAccountNumber(), user.getEmail());
+            throw new InvalidTransactionException(" Account No: " + account.getAccountNumber() + " does not  exists  in your ownership");
+        }
+
+        account.setTransactionPin(encoder.encode(setPinDto.getPin()));
+
+
+
     }
 
 

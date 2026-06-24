@@ -4,6 +4,7 @@ package com.banking.netBankingBackend.controller;
 import com.banking.netBankingBackend.dto.requestDtos.AccountsDto;
 import com.banking.netBankingBackend.dto.ResponseDto;
 import com.banking.netBankingBackend.dto.requestDtos.GetBalanceDto;
+import com.banking.netBankingBackend.dto.requestDtos.SetPinDto;
 import com.banking.netBankingBackend.dto.requestDtos.TransactionDto;
 import com.banking.netBankingBackend.service.IAccountsService;
 import com.banking.netBankingBackend.service.INetBankingService;
@@ -35,7 +36,7 @@ public class AccountsController {
     public ResponseEntity<ResponseDto> createAccount(@Valid @RequestBody AccountsDto accountsDto) {
         String emailHash = Objects.requireNonNull(
                 SecurityContextHolder.getContext().getAuthentication()).getName();
-        accountsService.createAccount(accountsDto,emailHash);
+        accountsService.createAccount(accountsDto, emailHash);
         return ResponseEntity.status(HttpStatus.CREATED).body(new ResponseDto("201", "Account created successfully"));
 
     }
@@ -51,12 +52,12 @@ public class AccountsController {
 
 
     @PostMapping("/transaction")
-    public ResponseEntity<ResponseDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
+    public ResponseEntity<ResponseDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto,@RequestHeader("X-transaction-Pin") String pin) {
 
         String emailHash = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
 
 
-        netBankingService.createTransaction(transactionDto,emailHash);
+        netBankingService.createTransaction(transactionDto, emailHash,pin);
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200", "Transaction  successful"));
 
     }
@@ -71,6 +72,18 @@ public class AccountsController {
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
 
+
+    }
+
+
+    @PostMapping("/set-pin")
+    public ResponseEntity<ResponseDto> setPin(@RequestBody SetPinDto setPinDto) {
+
+        String emailHash = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getName();
+
+        accountsService.setPin(setPinDto,emailHash);
+
+        return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200", "Pin successfully set"));
 
     }
 

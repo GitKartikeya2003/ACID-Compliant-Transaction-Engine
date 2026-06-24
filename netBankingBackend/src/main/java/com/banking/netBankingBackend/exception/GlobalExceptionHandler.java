@@ -1,6 +1,7 @@
 package com.banking.netBankingBackend.exception;
 
 import com.banking.netBankingBackend.dto.ErrorResponseDto;
+import com.banking.netBankingBackend.dto.ResponseDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -49,10 +50,29 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     }
 
+    @ExceptionHandler(PinNotSetException.class)
+    public ResponseEntity<ErrorResponseDto> handlePinNotSetException(PinNotSetException
+                                                                             exception,
+                                                                     WebRequest webRequest) {
+
+
+        ErrorResponseDto errorResponseDto = new ErrorResponseDto(
+                webRequest.getDescription(false),   //this is to only get the api path if i would have set
+                // it to true, then we will get more information that
+                // is not needed right now.....
+                HttpStatus.CONFLICT,
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
+
+    }
+
     @ExceptionHandler(InsufficientBalanceException.class)
     public ResponseEntity<ErrorResponseDto> handleInsufficientBalanceException(InsufficientBalanceException
-                                                                                    exception,
-                                                                            WebRequest webRequest) {
+                                                                                       exception,
+                                                                               WebRequest webRequest) {
 
         ErrorResponseDto errorResponseDto = new ErrorResponseDto(
                 webRequest.getDescription(false),   //this is to only get the api path if i would have set
@@ -90,10 +110,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidPinException.class)
+    public ResponseEntity<String> handleInvalidPinException(InvalidPinException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDto> handleUserAlreadyExistsException(UserAlreadyExistsException
-                                                                                       exception,
-                                                                               WebRequest webRequest) {
+                                                                                     exception,
+                                                                             WebRequest webRequest) {
 
         ErrorResponseDto errorResponseDto = new ErrorResponseDto(
                 webRequest.getDescription(false),   //this is to only get the api path if i would have set
@@ -108,7 +133,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     }
 
-
+    @ExceptionHandler(FrozenAccountException.class)
+    public ResponseEntity<ResponseDto> handleAccountFrozen(FrozenAccountException ex) {
+        return ResponseEntity
+                .status(HttpStatus.LOCKED)  // 423
+                .body(new ResponseDto("423", ex.getMessage()));
+    }
 
 
 //    @ExceptionHandler(DataIntegrityViolationException.class)
@@ -126,8 +156,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 //        return new ResponseEntity<>(errorResponseDto, HttpStatus.CONFLICT);
 //
 //    }
-
-
 
 
     //    @ExceptionHandler(BadCredentialsException.class)

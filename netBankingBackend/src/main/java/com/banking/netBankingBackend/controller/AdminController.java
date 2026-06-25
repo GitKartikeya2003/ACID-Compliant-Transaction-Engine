@@ -2,6 +2,7 @@ package com.banking.netBankingBackend.controller;
 
 
 import com.banking.netBankingBackend.dto.ResponseDto;
+import com.banking.netBankingBackend.dto.requestDtos.FreezeAccountDto;
 import com.banking.netBankingBackend.dto.requestDtos.GetBalanceDto;
 import com.banking.netBankingBackend.dto.responseDtos.FraudAlertDto;
 import com.banking.netBankingBackend.dto.responseDtos.FraudStatsDto;
@@ -54,20 +55,16 @@ public class AdminController {
     }
 
 
-    @PatchMapping("/fraud/alerts")
-    public ResponseEntity<ResponseDto> ClearUser(@RequestBody FraudAlertDto fraudAlertDto) {
-
-
-        adminService.ClearUser(fraudAlertDto);
-
+    @PatchMapping("/fraud/alerts/{alertId}")
+    public ResponseEntity<ResponseDto> ClearUser(@PathVariable Long alertId) {
+        adminService.ClearUser(alertId);
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200","Account cleared Successfully"));
-
     }
 
     @PostMapping("/fraud/freeze")
-    public ResponseEntity<ResponseDto> freezeAccount(@RequestBody GetBalanceDto getBalanceDto ) {
+    public ResponseEntity<ResponseDto> freezeAccount(@RequestBody FreezeAccountDto dto ) {
 
-        adminService.freezeAccount(getBalanceDto);
+        adminService.freezeAccount(dto);
 
         return ResponseEntity.status(HttpStatus.OK).body(new ResponseDto("200","Account Freezed Successfully"));
 

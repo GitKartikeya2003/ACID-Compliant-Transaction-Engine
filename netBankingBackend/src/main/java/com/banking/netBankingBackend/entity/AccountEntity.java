@@ -52,7 +52,8 @@ public class AccountEntity implements Serializable {
     private UserEntity user;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'ACTIVE'")
+    @Column(nullable = false, length = 20)
+    @org.hibernate.annotations.ColumnDefault("'ACTIVE'")
     private AccountStatus status = AccountStatus.ACTIVE;
 
     @Column(name = "transaction_pin")

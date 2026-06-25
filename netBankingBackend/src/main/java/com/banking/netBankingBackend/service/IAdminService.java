@@ -1,5 +1,6 @@
 package com.banking.netBankingBackend.service;
 
+import com.banking.netBankingBackend.dto.requestDtos.FreezeAccountDto;
 import com.banking.netBankingBackend.dto.requestDtos.GetBalanceDto;
 import com.banking.netBankingBackend.dto.responseDtos.FraudAlertDto;
 import com.banking.netBankingBackend.dto.responseDtos.FraudStatsDto;
@@ -17,7 +18,7 @@ public interface IAdminService {
 
     FraudStatsDto getStats();
 
-    void freezeAccount(GetBalanceDto getBalanceDto);
+    void freezeAccount(FreezeAccountDto freezeAccountDto);
 
-    void ClearUser(FraudAlertDto fraudAlertDto);
+    void ClearUser(Long alertId);
 }

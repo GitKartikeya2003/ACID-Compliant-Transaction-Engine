@@ -9,8 +9,8 @@ public class FraudMapper {
 
 
         fraudAlertDto.setStatus(fraudAlert.getStatus());
-        fraudAlertDto.setReason(fraudAlertDto.getReason());
-        fraudAlertDto.setAccountNumber(fraudAlertDto.getAccountNumber());
+        fraudAlertDto.setReason(fraudAlert.getReason());
+        fraudAlertDto.setAccountNumber(fraudAlert.getAccount().getAccountNumber());
         fraudAlertDto.setRuleType(fraudAlert.getRuleType());
         fraudAlertDto.setCreatedAt(fraudAlert.getCreatedAt());
 

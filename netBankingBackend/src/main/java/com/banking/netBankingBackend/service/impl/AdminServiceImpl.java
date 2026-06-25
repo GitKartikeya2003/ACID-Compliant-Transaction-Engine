@@ -1,6 +1,7 @@
 package com.banking.netBankingBackend.service.impl;
 
 
+import com.banking.netBankingBackend.dto.requestDtos.FreezeAccountDto;
 import com.banking.netBankingBackend.dto.requestDtos.GetBalanceDto;
 import com.banking.netBankingBackend.dto.responseDtos.FraudAlertDto;
 import com.banking.netBankingBackend.dto.responseDtos.FraudStatsDto;
@@ -116,9 +117,9 @@ public class AdminServiceImpl implements IAdminService {
         stats.setTotalAlerts(fraudAlertRepository.count());
 
         // Counts by status
-        stats.setOpenAlerts(fraudAlertRepository.findByStatus(AlertStatus.OPEN).size());
-        stats.setClearedAlerts(fraudAlertRepository.findByStatus(AlertStatus.CLEARED).size());
-        stats.setConfirmedAlerts(fraudAlertRepository.findByStatus(AlertStatus.CONFIRMED).size());
+        stats.setOpenAlerts(fraudAlertRepository.countByStatus(AlertStatus.OPEN));
+        stats.setClearedAlerts(fraudAlertRepository.countByStatus(AlertStatus.CLEARED));
+        stats.setConfirmedAlerts(fraudAlertRepository.countByStatus(AlertStatus.CONFIRMED));
 
         // Count by rule type (all statuses)
         List<Object[]> ruleTypeCounts = fraudAlertRepository.countByRuleType();
@@ -145,7 +146,7 @@ public class AdminServiceImpl implements IAdminService {
 
     @Override
     @Transactional
-    public void freezeAccount(GetBalanceDto getBalanceDto) {
+    public void freezeAccount(FreezeAccountDto getBalanceDto) {
 
 
         String accountHash = AESUtil.hash(getBalanceDto.getAccountNo());
@@ -160,24 +161,10 @@ public class AdminServiceImpl implements IAdminService {
 
     @Override
     @Transactional
-    public void ClearUser(FraudAlertDto fraudAlertDto) {
-
-
-//        String accountHash = AESUtil.hash(fraudAlertDto.getAccountNumber());
-//        AccountEntity account = accountsRepository.findByAccountHash(accountHash).orElseThrow(
-//                () -> new ResourceNotFoundException("No  Such Account exists")
-//        );
-//
-//        account.setStatus(AccountStatus.ACTIVE);
-
-
-        // Find the alert by ID, not the account
-        FraudAlert alert = fraudAlertRepository.findById(fraudAlertDto.getAlertId())
+    public void ClearUser(Long alertId) {
+        FraudAlert alert = fraudAlertRepository.findById(alertId)
                 .orElseThrow(() -> new ResourceNotFoundException("Alert not found"));
-
         alert.setStatus(AlertStatus.CLEARED);
-
-
     }
 
 

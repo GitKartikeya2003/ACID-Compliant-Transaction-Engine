@@ -2,16 +2,12 @@ package com.banking.netBankingBackend.service.impl;
 
 
 import com.banking.netBankingBackend.entity.AccountEntity;
-import com.banking.netBankingBackend.entity.FraudDetectionEntities.FraudAlert;
 import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.TransactionCompletedEvent;
 import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.TransactionInsufficientFundsEvent;
 import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.TransactionPinFailedEvent;
-import com.banking.netBankingBackend.enums.AlertStatus;
 import com.banking.netBankingBackend.enums.RuleType;
-import com.banking.netBankingBackend.repository.FraudAlertRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
@@ -20,7 +16,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -28,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class FraudDetectionService {
 
-    private final FraudAlertRepository fraudAlertRepository;
-    private final RedisTemplate<String, String> redisTemplate;
 
+    private final RedisTemplate<String, String> redisTemplate;
+    private final FraudAlertPersistenceService fraudAlertPersistenceService;
 
 
     private static final BigDecimal LARGE_TRANSFER_THRESHOLD = new BigDecimal("100000");
@@ -40,7 +35,6 @@ public class FraudDetectionService {
 
     private static final int BRUTE_FORCE_LIMIT = 3;
     private static final Duration BRUTE_FORCE_WINDOW = Duration.ofMinutes(5);
-
 
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -63,7 +57,7 @@ public class FraudDetectionService {
         }
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void handleInsufficientFunds(TransactionInsufficientFundsEvent event) {
         try {
             checkAccountDrain(event.getAccount(), event.getAttemptedAmount());
@@ -93,7 +87,7 @@ public class FraudDetectionService {
             log.warn("Velocity rule fired for account {}: {} transfers within {} minutes",
                     accountNo, count, VELOCITY_WINDOW.toMinutes());
 
-            createAlert(
+            fraudAlertPersistenceService.createAlert(
                     event.getAccount(),
                     RuleType.VELOCITY,
                     count + " transfers in " + VELOCITY_WINDOW.toMinutes()
@@ -109,7 +103,7 @@ public class FraudDetectionService {
             log.warn("Large transfer rule fired for account {}: amount {}",
                     event.getAccount().getAccountNumber(), event.getAmount());
 
-            createAlert(
+            fraudAlertPersistenceService.createAlert(
                     event.getAccount(),
                     RuleType.LARGE_TRANSFER,
                     "Transfer of " + event.getAmount() + " exceeds threshold of " + LARGE_TRANSFER_THRESHOLD
@@ -135,7 +129,7 @@ public class FraudDetectionService {
                     event.getAccount().getAccountNumber(),
                     drainRatio.multiply(BigDecimal.valueOf(100)).setScale(1, RoundingMode.HALF_UP));
 
-            createAlert(
+            fraudAlertPersistenceService.createAlert(
                     event.getAccount(),
                     RuleType.ACCOUNT_DRAIN,
                     "Transfer of " + event.getAmount() + " drained "
@@ -161,7 +155,7 @@ public class FraudDetectionService {
                     account.getAccountNumber(),
                     drainRatio.multiply(BigDecimal.valueOf(100)).setScale(1, RoundingMode.HALF_UP));
 
-            createAlert(
+            fraudAlertPersistenceService.createAlert(
                     account,
                     RuleType.ACCOUNT_DRAIN,
                     "Attempted transfer of " + attemptedAmount + " would have drained "
@@ -172,23 +166,8 @@ public class FraudDetectionService {
     }
 
 
-    private void createAlert(AccountEntity acc, RuleType ruleType, String reason) {
 
-
-        FraudAlert alert = FraudAlert.builder()
-                .account(acc)
-                .ruleType(ruleType)
-                .status(AlertStatus.OPEN)
-                .reason(reason)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        fraudAlertRepository.save(alert);
-
-        log.info("Fraud alert created: account={}, rule={}, reason={}", acc.getAccountNumber(), ruleType, reason);
-    }
-
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void onPinFailed(TransactionPinFailedEvent event) {
 
         try {
@@ -221,7 +200,7 @@ public class FraudDetectionService {
             log.warn("Brute force rule fired for account {}: {} failed PIN attempts in {} minutes",
                     accountNumber, count, BRUTE_FORCE_WINDOW.toMinutes());
 
-            createAlert(
+            fraudAlertPersistenceService.createAlert(
                     event.getAccount(),
                     RuleType.BRUTE_FORCE,
                     count + " failed PIN attempts in " + BRUTE_FORCE_WINDOW.toMinutes()

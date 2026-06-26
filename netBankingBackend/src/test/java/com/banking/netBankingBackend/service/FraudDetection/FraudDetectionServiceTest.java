@@ -48,7 +48,7 @@ class FraudDetectionServiceTest {
         account.setAccountNumber("ACC123456");
         account.setBalance(new BigDecimal("10000"));
 
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }
 
     // ─────────────────────────────────────────────

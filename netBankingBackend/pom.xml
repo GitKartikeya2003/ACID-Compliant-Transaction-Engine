@@ -11,6 +11,7 @@
 	<groupId>com.banking</groupId>
 	<artifactId>netBankingBackend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
 	<name/>
 	<description/>
 	<url/>
@@ -134,6 +135,14 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Source: https://mvnrepository.com/artifact/io.gatling.highcharts/gatling-charts-highcharts -->
+		<dependency>
+			<groupId>io.gatling.highcharts</groupId>
+			<artifactId>gatling-charts-highcharts</artifactId>
+			<version>3.15.0</version>
+			<scope>compile</scope>
+		</dependency>
+
 
 
 	</dependencies>
@@ -187,6 +196,26 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>com.google.cloud.tools</groupId>
+				<artifactId>jib-maven-plugin</artifactId>
+				<version>3.5.1</version>
+				<configuration>
+					<to>
+						<image>dockerkartikeya/acid-compliant-transaction-engine:v1</image>
+					</to>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>io.gatling</groupId>
+				<artifactId>gatling-maven-plugin</artifactId>
+				<version>4.2.9</version>
+				<configuration>
+					<simulationClass>com.codingstrain.springcloud.sample.libraryapp.books.BookSaveSimulation</simulationClass>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>

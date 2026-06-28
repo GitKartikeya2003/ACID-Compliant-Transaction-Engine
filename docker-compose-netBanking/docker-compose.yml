@@ -21,6 +21,24 @@ services:
     volumes:
       - redis_data:/data
 
+  backend:
+    image: dockerkartikeya/acid-compliant-transaction-engine:v1
+    container_name: netBanking-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env  # <--- This automatically injects ALL variables from your .env file
+    environment:
+      # If your application.properties expects SPRING_DATASOURCE_URL, map it to the .env variables here:
+      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_REDIS_HOST: ${REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
 
 
 volumes:

@@ -18,6 +18,7 @@ import com.banking.netBankingBackend.repository.FraudAlertRepository;
 import com.banking.netBankingBackend.service.IAdminService;
 import com.banking.netBankingBackend.util.AESUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ public class AdminServiceImpl implements IAdminService {
     private final FraudAlertRepository fraudAlertRepository;
 
     @Override
+    @Cacheable(value = "allUsers", key = "'all'")
     public List<GetBalanceDto> getAllUsers() {
 
         List<AccountEntity> users = accountsRepository.findAll();
@@ -61,6 +63,7 @@ public class AdminServiceImpl implements IAdminService {
     }
 
     @Override
+    @Cacheable(value = "allAlerts", key = "'all'")
     public List<FraudAlertDto> getAllAlerts() {
 
         List<FraudAlert> fraudAlerts = fraudAlertRepository.findAll();
@@ -78,6 +81,7 @@ public class AdminServiceImpl implements IAdminService {
     }
 
     @Override
+    @Cacheable(value = "alertHistory", key = "#accountNumber")
     public List<FraudAlertDto> alertHistory_perAccount(String accountNumber) {
 
         String accountHash = AESUtil.hash(accountNumber);
@@ -110,6 +114,7 @@ public class AdminServiceImpl implements IAdminService {
     }
 
     @Override
+    @Cacheable(value = "fraudStats", key = "'stats'")
     public FraudStatsDto getStats() {
         FraudStatsDto stats = new FraudStatsDto();
 

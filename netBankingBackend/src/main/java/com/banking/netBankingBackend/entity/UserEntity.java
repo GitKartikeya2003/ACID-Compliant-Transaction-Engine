@@ -28,11 +28,11 @@ public class UserEntity {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(name = "email", unique = true, nullable = false,length = 255)        //For Credentials
+    @Column(name = "email", nullable = false, length = 255)        //For Credentials
     @Convert(converter = AESAttributeConvertor.class)
     private String email;
 
-    @Column(name = "phone_number", unique = true, nullable = false) //For Credentials
+    @Column(name = "phone_number", nullable = false) //For Credentials
     @Convert(converter = AESAttributeConvertor.class)
     private String phoneNumber;
 
@@ -42,7 +42,7 @@ public class UserEntity {
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
-    @Column(name = "pan_number", unique = true, nullable = false)
+    @Column(name = "pan_number", nullable = false)
     @Convert(converter = AESAttributeConvertor.class)
     private String panNumber;
 
@@ -55,7 +55,6 @@ public class UserEntity {
 
     @Column(name = "failed_attempts", nullable = false)
     private int failedAttempts = 0;
-
 
 
     @Column(name = "created_at", nullable = false, updatable = false)

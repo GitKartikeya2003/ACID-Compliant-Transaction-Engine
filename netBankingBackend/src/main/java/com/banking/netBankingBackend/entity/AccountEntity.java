@@ -26,7 +26,7 @@ public class AccountEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 128)
+    @Column(nullable = false, length = 128)
     @Convert(converter = AESAttributeConvertor.class)
     private String accountNumber;
 

@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:16
     container_name: netBanking-postgres
@@ -10,6 +11,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  postgres-second:
+    image: postgres:16
+    container_name: secondApp-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: secondAppDB
+    ports:
+      - "5433:5432"
+    volumes:
+      - second_postgres_data_v2:/var/lib/postgresql/data # Changed here
     restart: unless-stopped
 
   redis:
@@ -43,4 +57,5 @@ services:
 
 volumes:
   postgres_data:
+  second_postgres_data_v2:
   redis_data:

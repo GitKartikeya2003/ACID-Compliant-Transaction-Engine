@@ -13,6 +13,7 @@ import com.banking.netBankingBackend.service.impl.security.JwtServiceImpl;
 import com.banking.netBankingBackend.util.AESUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -34,27 +35,30 @@ public class UserServiceImpl {
 
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public void register(UserRegistrationDto userDto) {
-        String email = userDto.getEmail();
+        try {
+            String email = userDto.getEmail();
 
 
-        log.info("Registration attempt initiated for email: {}", email);
+            log.info("Registration attempt initiated for email: {}", email);
 
 
+            userRepository.findByEmailHash(AESUtil.hash(userDto.getEmail())).ifPresent(existingUser -> {
 
-        userRepository.findByEmailHash(AESUtil.hash(userDto.getEmail())).ifPresent(existingUser -> {
+                log.error("Critical inconsistency:  user with email {} already exists in the database.", email);
+                throw new UserAlreadyExistsException("User with email " + email + " already exists");
+            });
 
-            log.error("Critical inconsistency:  user with email {} already exists in the database.", email);
-            throw new UserAlreadyExistsException("User with email " + email + " already exists");
-        });
-
-        log.info("Registration attempt successful for email: {}", email);
-        UserEntity userEntity = new UserEntity();
-        UserMapper.userDto_to_UserEntity(userEntity, userDto);
+            log.info("Registration attempt successful for email: {}", email);
+            UserEntity userEntity = new UserEntity();
+            UserMapper.userDto_to_UserEntity(userEntity, userDto);
 
 
-        log.info("Saving in Repository for  email: {}", email);
-        userRepository.save(userEntity);
-        log.info("Saved in Repository for  email: {}", email);
+            log.info("Saving in Repository for  email: {}", email);
+            userRepository.save(userEntity);
+            log.info("Saved in Repository for  email: {}", email);
+        } catch (DataIntegrityViolationException e) {
+            throw new UserAlreadyExistsException("Email, phone or PAN already registered");
+        }
 
 
     }

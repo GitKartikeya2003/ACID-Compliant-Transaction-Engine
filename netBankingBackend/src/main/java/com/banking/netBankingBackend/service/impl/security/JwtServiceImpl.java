@@ -29,7 +29,8 @@ public class JwtServiceImpl {
                 .claims(claims)
                 .subject(emailHash)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 15)) // 15 mins
+                .expiration(new Date(System.currentTimeMillis() + 24L * 60 * 60 * 1000)) // 24 hrs
+              //  .expiration(new Date(System.currentTimeMillis() + 1000L * 60 * 15)) // 15 mins
                 .signWith(getKey())
                 .compact();
     }

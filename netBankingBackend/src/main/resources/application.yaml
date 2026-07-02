@@ -10,6 +10,10 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 150      # Increases concurrent DB connections
+      connection-timeout: 30000   # Max time (ms) to wait for a connection
+      minimum-idle: 20            # Keeps connections ready for sudden spikes
 
   jpa:
     hibernate:
@@ -37,6 +41,12 @@ server:
     session:
       cookie:
         same-site: strict
+  tomcat:
+    threads:
+      max: 400            # Increases the maximum worker threads
+      min-spare: 50       # Minimum threads kept alive
+    accept-count: 200     # How many requests can queue up when all threads are busy
+    connection-timeout: 20000 # Time (ms) Tomcat waits for a client to send the reques
 
 
 jwt:

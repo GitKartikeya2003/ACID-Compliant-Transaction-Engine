@@ -44,6 +44,11 @@ public class JwtServiceImpl {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public String extractRole(String token) {
+        Object role = extractAllClaims(token).get("roles");
+        return String.valueOf(role);
+    }
+
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
         final Claims claims = extractAllClaims(token);
         return claimResolver.apply(claims);
@@ -60,6 +65,10 @@ public class JwtServiceImpl {
     public boolean validateToken(String token, UserDetails userDetails) {
         final String userName = extractUsername(token);
         return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+    }
+
+    public boolean validateToken(String token) {
+        return !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

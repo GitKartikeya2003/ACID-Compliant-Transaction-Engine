@@ -2,6 +2,7 @@ package com.banking.netBankingBackend.exception;
 
 import com.banking.netBankingBackend.dto.ErrorResponseDto;
 import com.banking.netBankingBackend.dto.ResponseDto;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -27,7 +28,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 LocalDateTime.now()
         );
 
-        return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.CONFLICT);
 
     }
 
@@ -46,7 +47,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 LocalDateTime.now()
         );
 
-        return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.UNPROCESSABLE_CONTENT);
 
     }
 
@@ -65,7 +66,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 LocalDateTime.now()
         );
 
-        return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.BAD_REQUEST);
 
     }
 
@@ -85,6 +86,21 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(errorResponseDto, HttpStatus.NOT_FOUND);
 
+    }
+
+    @ExceptionHandler(DataAccessResourceFailureException.class)
+    public ResponseEntity<ErrorResponseDto> handleDataAccessResourceFailureException(
+            DataAccessResourceFailureException exception,
+            WebRequest webRequest) {
+
+        ErrorResponseDto errorResponseDto = new ErrorResponseDto(
+                webRequest.getDescription(false),
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Database connection pool is exhausted",
+                LocalDateTime.now()
+        );
+
+        return new ResponseEntity<>(errorResponseDto, HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @ExceptionHandler(SameAccountTransferException.class)

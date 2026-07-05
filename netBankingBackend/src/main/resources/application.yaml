@@ -11,15 +11,25 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: 150      # Increases concurrent DB connections
-      connection-timeout: 30000   # Max time (ms) to wait for a connection
-      minimum-idle: 20            # Keeps connections ready for sudden spikes
+      maximum-pool-size: 60       # Keep below local Postgres max_connections
+      minimum-idle: 10            # Warm connections without exhausting Postgres
+      connection-timeout: 10000   # Fail fast instead of waiting 30s under saturation
+      max-lifetime: 1800000
+  fraud-datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 2
+      connection-timeout: 5000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
       ddl-auto: update
     defer-datasource-initialization: true
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -43,9 +53,9 @@ server:
         same-site: strict
   tomcat:
     threads:
-      max: 400            # Increases the maximum worker threads
-      min-spare: 50       # Minimum threads kept alive
-    accept-count: 200     # How many requests can queue up when all threads are busy
+      max: 80             # Keep app concurrency aligned with DB pool capacity
+      min-spare: 20       # Minimum threads kept alive
+    accept-count: 50      # Queue briefly instead of allowing huge request pileups
     connection-timeout: 20000 # Time (ms) Tomcat waits for a client to send the reques
 
 
@@ -66,5 +76,3 @@ razorpay:
   key-id: ${RAZORPAY_KEY_ID}
   key-secret: ${RAZORPAY_KEY_SECRET}
   verify-signature: false
-
-

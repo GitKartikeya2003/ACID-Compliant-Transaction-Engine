@@ -17,7 +17,7 @@ import java.util.Optional;
 public interface AccountsRepository extends JpaRepository<AccountEntity, Long>, RevisionRepository<AccountEntity, Long, Integer> {
 
 
-    Optional<AccountEntity> findByAccountNumber(String accountNumber);
+
 
     boolean existsByAccountNumber(String accountNumber);
 
@@ -29,4 +29,6 @@ public interface AccountsRepository extends JpaRepository<AccountEntity, Long>, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM AccountEntity a WHERE a.accountHash = :accountHash")
     Optional<AccountEntity> findByAccountHashForUpdate(@Param("accountHash") String accountHash);
+
+    boolean existsByAccountHash(String accountHash);
 }

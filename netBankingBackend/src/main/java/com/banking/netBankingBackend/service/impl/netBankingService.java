@@ -13,6 +13,8 @@ import com.banking.netBankingBackend.exception.*;
 import com.banking.netBankingBackend.repository.AccountsRepository;
 import com.banking.netBankingBackend.service.INetBankingService;
 import com.banking.netBankingBackend.util.AESUtil;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,14 +31,14 @@ import java.time.LocalDateTime;
 @Slf4j
 public class netBankingService implements INetBankingService {
 
-
     private final AccountsRepository accountsRepository;
-
     private final TransactionLogService transactionLogService;
-
     private final ApplicationEventPublisher eventPublisher;
 
     private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+
+    @PersistenceContext
+    private final EntityManager entityManager;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -57,9 +59,10 @@ public class netBankingService implements INetBankingService {
         String fromAccountNoHash = AESUtil.hash(transactionDto.getFrom_accountNumber());
         String toAccountHash = AESUtil.hash(transactionDto.getTo_AccountNumber());
 
-        // --- Fast, unlocked pre-checks (ownership, frozen status, PIN) ---
-        // Do these BEFORE taking any row lock so a bad PIN or frozen account
-        // never holds a connection under lock contention.
+        // --- Fast, unlocked pre-check for the SENDER ONLY ---
+        // Justified: PIN verification (BCrypt, ~100ms+) must not run while holding a row lock.
+        // The receiver has no PIN check, so it gets NO unlocked pre-fetch — that fetch was
+        // dead weight and the source of the stale-entity bug. It's gone, not refreshed away.
         AccountEntity fromAccountUnlocked = accountsRepository.findByAccountHash(fromAccountNoHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
@@ -74,11 +77,11 @@ public class netBankingService implements INetBankingService {
                     "Account No: " + fromAccountUnlocked.getAccountNumber() + " does not exist in your ownership");
         }
 
-        AccountEntity toAccountUnlocked = accountsRepository.findByAccountHash(toAccountHash)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-
-        if (toAccountUnlocked.getStatus() == AccountStatus.FROZEN) {
-            throw new FrozenAccountException("Receiver Account is Frozen");
+        // Confirm the receiver account exists before we bother verifying a PIN for a
+        // transfer that can never complete. Cheap existence check, not a full unlocked
+        // entity fetch we'd have to worry about going stale later.
+        if (!accountsRepository.existsByAccountHash(toAccountHash)) {
+            throw new ResourceNotFoundException("Account not found");
         }
 
         log.info("Verifying PIN code for account");
@@ -88,6 +91,9 @@ public class netBankingService implements INetBankingService {
         String firstHash = fromAccountNoHash.compareTo(toAccountHash) < 0 ? fromAccountNoHash : toAccountHash;
         String secondHash = firstHash.equals(fromAccountNoHash) ? toAccountHash : fromAccountNoHash;
 
+        // Scoped to this transaction only — auto-resets on commit/rollback.
+        entityManager.createNativeQuery("SET LOCAL lock_timeout = '3000'").executeUpdate();
+
         AccountEntity firstLocked = accountsRepository.findByAccountHashForUpdate(firstHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
         AccountEntity secondLocked = accountsRepository.findByAccountHashForUpdate(secondHash)
@@ -95,6 +101,16 @@ public class netBankingService implements INetBankingService {
 
         AccountEntity fromAccount = firstHash.equals(fromAccountNoHash) ? firstLocked : secondLocked;
         AccountEntity toAccount = firstHash.equals(fromAccountNoHash) ? secondLocked : firstLocked;
+
+        // fromAccount was already in the persistence context from the unlocked pre-fetch
+        // above (same Hibernate identity), so the row lock alone does NOT guarantee its
+        // in-memory fields reflect what the lock just protected. Force a re-read.
+        // toAccount was NEVER pre-fetched — this IS its first read, so no refresh needed.
+        entityManager.refresh(fromAccount);
+
+        if (toAccount.getStatus() == AccountStatus.FROZEN) {
+            throw new FrozenAccountException("Receiver Account is Frozen");
+        }
 
         BigDecimal balanceBefore = fromAccount.getBalance();
 
@@ -133,7 +149,6 @@ public class netBankingService implements INetBankingService {
                 toAccount.getAccountNumber(), toAccount.getBalance());
     }
 
-    // Inside your transfer service, BEFORE processing the transfer
     public void verifyTransactionPin(AccountEntity account, String enteredPin) {
 
         if (account.getTransactionPin() == null) {
@@ -153,6 +168,4 @@ public class netBankingService implements INetBankingService {
             throw new InvalidPinException("Invalid transaction PIN");
         }
     }
-
-
 }

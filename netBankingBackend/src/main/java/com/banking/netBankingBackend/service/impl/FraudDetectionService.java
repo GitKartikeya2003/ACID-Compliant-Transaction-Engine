@@ -9,6 +9,7 @@ import com.banking.netBankingBackend.enums.RuleType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -37,6 +38,7 @@ public class FraudDetectionService {
     private static final Duration BRUTE_FORCE_WINDOW = Duration.ofMinutes(5);
 
 
+    @Async("fraudExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTransferCompleted(TransactionCompletedEvent event) {
         // each rule is wrapped so one rule throwing doesn't stop the others from running
@@ -57,6 +59,7 @@ public class FraudDetectionService {
         }
     }
 
+    @Async("fraudExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void handleInsufficientFunds(TransactionInsufficientFundsEvent event) {
         try {
@@ -166,7 +169,7 @@ public class FraudDetectionService {
     }
 
 
-
+    @Async("fraudExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     public void onPinFailed(TransactionPinFailedEvent event) {
 

@@ -39,72 +39,74 @@ public class netBankingService implements INetBankingService {
     private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     @Override
-    @Transactional(rollbackFor = Exception.class)          // Fixed import + rollbackFor
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = "accounts", allEntries = true)
     public void createTransaction(TransactionDto transactionDto, String emailHash, String pin) {
 
-
-        if (transactionDto.getFrom_accountNumber()
-                .equals(transactionDto.getTo_AccountNumber())) {
-            log.warn("Rejected transfer: same account number {}",
-                    transactionDto.getFrom_accountNumber());
+        if (transactionDto.getFrom_accountNumber().equals(transactionDto.getTo_AccountNumber())) {
+            log.warn("Rejected transfer: same account number {}", transactionDto.getFrom_accountNumber());
             throw new SameAccountTransferException("Cannot transfer to the same account");
         }
 
-
         if (transactionDto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("Rejected transfer: invalid amount {} from account {}",
-                    transactionDto.getAmount(),
-                    transactionDto.getFrom_accountNumber());
+                    transactionDto.getAmount(), transactionDto.getFrom_accountNumber());
             throw new InvalidTransactionException("Transfer amount must be greater than zero");
         }
 
         String fromAccountNoHash = AESUtil.hash(transactionDto.getFrom_accountNumber());
         String toAccountHash = AESUtil.hash(transactionDto.getTo_AccountNumber());
 
-
-        AccountEntity fromAccount = accountsRepository.findByAccountHash(fromAccountNoHash)
+        // --- Fast, unlocked pre-checks (ownership, frozen status, PIN) ---
+        // Do these BEFORE taking any row lock so a bad PIN or frozen account
+        // never holds a connection under lock contention.
+        AccountEntity fromAccountUnlocked = accountsRepository.findByAccountHash(fromAccountNoHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
-
-        if(fromAccount.getStatus() == AccountStatus.FROZEN){
+        if (fromAccountUnlocked.getStatus() == AccountStatus.FROZEN) {
             throw new FrozenAccountException("Your Account has been frozen");
         }
 
-        BigDecimal balanceBefore = fromAccount.getBalance();
-
-        UserEntity user = fromAccount.getUser();
-
+        UserEntity user = fromAccountUnlocked.getUser();
         if (user.getEmailHash().compareTo(emailHash) != 0) {
-
-            log.warn("Account no {} is not of user: {}", fromAccount.getAccountNumber(), user.getEmail());
-            throw new InvalidTransactionException(" Account No: " + fromAccount.getAccountNumber() + " does not  exists  in your ownership");
+            log.warn("Account no {} is not of user: {}", fromAccountUnlocked.getAccountNumber(), user.getEmail());
+            throw new InvalidTransactionException(
+                    "Account No: " + fromAccountUnlocked.getAccountNumber() + " does not exist in your ownership");
         }
 
-
-        AccountEntity toAccount = accountsRepository.findByAccountHash(toAccountHash)
+        AccountEntity toAccountUnlocked = accountsRepository.findByAccountHash(toAccountHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
-        if(toAccount.getStatus() == AccountStatus.FROZEN){
+        if (toAccountUnlocked.getStatus() == AccountStatus.FROZEN) {
             throw new FrozenAccountException("Receiver Account is Frozen");
         }
 
-
         log.info("Verifying PIN code for account");
-        verifyTransactionPin(fromAccount, pin);
+        verifyTransactionPin(fromAccountUnlocked, pin); // BCrypt happens here, no lock held
+
+        // --- Now take locks, in a FIXED order, to avoid deadlocks ---
+        String firstHash = fromAccountNoHash.compareTo(toAccountHash) < 0 ? fromAccountNoHash : toAccountHash;
+        String secondHash = firstHash.equals(fromAccountNoHash) ? toAccountHash : fromAccountNoHash;
+
+        AccountEntity firstLocked = accountsRepository.findByAccountHashForUpdate(firstHash)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        AccountEntity secondLocked = accountsRepository.findByAccountHashForUpdate(secondHash)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+
+        AccountEntity fromAccount = firstHash.equals(fromAccountNoHash) ? firstLocked : secondLocked;
+        AccountEntity toAccount = firstHash.equals(fromAccountNoHash) ? secondLocked : firstLocked;
+
+        BigDecimal balanceBefore = fromAccount.getBalance();
 
         log.info("Transfer initiated: amount={} from account={} to account={}",
                 transactionDto.getAmount(),
                 transactionDto.getFrom_accountNumber(),
                 transactionDto.getTo_AccountNumber());
 
-
         if (fromAccount.getBalance().compareTo(transactionDto.getAmount()) < 0) {
             transactionLogService.saveTransaction(fromAccount, toAccount, transactionDto.getAmount(), Status.FAILED);
             log.warn("Transfer FAILED: insufficient balance. Account={} has={} requested={}",
-                    fromAccount.getAccountNumber(),
-                    fromAccount.getBalance(),
-                    transactionDto.getAmount());
+                    fromAccount.getAccountNumber(), fromAccount.getBalance(), transactionDto.getAmount());
 
             eventPublisher.publishEvent(
                     TransactionInsufficientFundsEvent.builder()
@@ -115,35 +117,20 @@ public class netBankingService implements INetBankingService {
                             .build()
             );
             throw new InsufficientBalanceException("Insufficient balance");
-        } else {
-
-            // Perform Transfer
-
-            BigDecimal amountToSend = transactionDto.getAmount();
-
-            fromAccount.setBalance(fromAccount.getBalance().subtract(amountToSend));
-            toAccount.setBalance(toAccount.getBalance().add(amountToSend));
-
-
-            transactionLogService.saveTransaction(fromAccount, toAccount, amountToSend, Status.SUCCESS);
-            eventPublisher.publishEvent(
-                    new TransactionCompletedEvent(
-                            fromAccount,
-                            amountToSend,
-                            balanceBefore,
-                            LocalDateTime.now()
-                    )
-            );
-            log.info("Transfer SUCCESS: amount={} from account={} (new balance={}) to account={} (new balance={})",
-                    amountToSend,
-                    fromAccount.getAccountNumber(),
-                    fromAccount.getBalance(),
-                    toAccount.getAccountNumber(),
-                    toAccount.getBalance());
-
         }
 
+        BigDecimal amountToSend = transactionDto.getAmount();
+        fromAccount.setBalance(fromAccount.getBalance().subtract(amountToSend));
+        toAccount.setBalance(toAccount.getBalance().add(amountToSend));
 
+        transactionLogService.saveTransaction(fromAccount, toAccount, amountToSend, Status.SUCCESS);
+        eventPublisher.publishEvent(
+                new TransactionCompletedEvent(fromAccount, amountToSend, balanceBefore, LocalDateTime.now())
+        );
+
+        log.info("Transfer SUCCESS: amount={} from account={} (new balance={}) to account={} (new balance={})",
+                amountToSend, fromAccount.getAccountNumber(), fromAccount.getBalance(),
+                toAccount.getAccountNumber(), toAccount.getBalance());
     }
 
     // Inside your transfer service, BEFORE processing the transfer

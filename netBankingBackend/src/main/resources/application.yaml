@@ -51,6 +51,8 @@ server:
     session:
       cookie:
         same-site: strict
+  compression:
+    enabled: true
   tomcat:
     threads:
       max: 80             # Keep app concurrency aligned with DB pool capacity

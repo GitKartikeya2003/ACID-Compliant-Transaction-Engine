@@ -21,6 +21,7 @@ public interface AccountsRepository extends JpaRepository<AccountEntity, Long>, 
 
     boolean existsByAccountNumber(String accountNumber);
 
+
     List<AccountEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     Optional<AccountEntity> findByAccountHash(String hashAccount);

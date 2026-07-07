@@ -61,8 +61,7 @@ public class netBankingService implements INetBankingService {
 
         // --- Fast, unlocked pre-check for the SENDER ONLY ---
         // Justified: PIN verification (BCrypt, ~100ms+) must not run while holding a row lock.
-        // The receiver has no PIN check, so it gets NO unlocked pre-fetch — that fetch was
-        // dead weight and the source of the stale-entity bug. It's gone, not refreshed away.
+        // The receiver has no PIN check
         AccountEntity fromAccountUnlocked = accountsRepository.findByAccountHash(fromAccountNoHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
@@ -85,7 +84,7 @@ public class netBankingService implements INetBankingService {
         }
 
         log.info("Verifying PIN code for account");
-        verifyTransactionPin(fromAccountUnlocked, pin); // BCrypt happens here, no lock held
+        verifyTransactionPin(fromAccountUnlocked, pin);
 
         // --- Now take locks, in a FIXED order, to avoid deadlocks ---
         String firstHash = fromAccountNoHash.compareTo(toAccountHash) < 0 ? fromAccountNoHash : toAccountHash;
@@ -102,10 +101,7 @@ public class netBankingService implements INetBankingService {
         AccountEntity fromAccount = firstHash.equals(fromAccountNoHash) ? firstLocked : secondLocked;
         AccountEntity toAccount = firstHash.equals(fromAccountNoHash) ? secondLocked : firstLocked;
 
-        // fromAccount was already in the persistence context from the unlocked pre-fetch
-        // above (same Hibernate identity), so the row lock alone does NOT guarantee its
-        // in-memory fields reflect what the lock just protected. Force a re-read.
-        // toAccount was NEVER pre-fetched — this IS its first read, so no refresh needed.
+
         entityManager.refresh(fromAccount);
 
         if (toAccount.getStatus() == AccountStatus.FROZEN) {

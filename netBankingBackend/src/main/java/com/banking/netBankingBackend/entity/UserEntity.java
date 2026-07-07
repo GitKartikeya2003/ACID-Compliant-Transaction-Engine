@@ -17,7 +17,13 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        indexes = {
+                @Index(name = "idx_user_role", columnList = "role"),// for filtering the user role
+                @Index(name = "idx_user_is_active", columnList = "is_active"),
+        }
+)
 @Audited
 public class UserEntity {
 

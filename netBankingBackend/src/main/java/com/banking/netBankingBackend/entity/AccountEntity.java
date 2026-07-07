@@ -18,7 +18,14 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 @Entity
-@Table(name = "accounts")
+@Table(
+        name = "accounts",
+        indexes = {
+                @Index(name = "idx_account_user_id", columnList = "user_id"),   //indexing the foreign key
+                @Index(name = "idx_account_status", columnList = "status"),
+                @Index(name = "idx_account_user_status", columnList = "user_id, status")
+        }
+)
 @Audited
 public class AccountEntity implements Serializable {
 

@@ -27,9 +27,16 @@ public interface AccountsRepository extends JpaRepository<AccountEntity, Long>, 
     Optional<AccountEntity> findByAccountHash(String hashAccount);
 
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT a FROM AccountEntity a WHERE a.accountHash = :accountHash")
-    Optional<AccountEntity> findByAccountHashForUpdate(@Param("accountHash") String accountHash);
+//    @Lock(LockModeType.PESSIMISTIC_WRITE)
+//    @Query("SELECT a FROM AccountEntity a WHERE a.accountHash = :accountHash")
+//    Optional<AccountEntity> findByAccountHashForUpdate(@Param("accountHash") String accountHash);
 
     boolean existsByAccountHash(String accountHash);
+
+    @Query("select a.transactionPin from AccountEntity a where a.accountHash = :hash")
+    Optional<String> findTransactionPinByHash(@Param("hash") String hash);
+
+    @Query("select a from AccountEntity a where a.accountHash in :hashes order by a.accountHash")
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<AccountEntity> findByAccountHashInForUpdate(@Param("hashes") List<String> hashes);
 }

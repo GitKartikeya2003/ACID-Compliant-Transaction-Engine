@@ -21,9 +21,11 @@ import java.time.LocalDateTime;
 @Table(
         name = "accounts",
         indexes = {
-                @Index(name = "idx_account_user_id", columnList = "user_id"),   //indexing the foreign key
+                @Index(name = "idx_account_user_id", columnList = "user_id"),           // foreign key lookup
                 @Index(name = "idx_account_status", columnList = "status"),
-                @Index(name = "idx_account_user_status", columnList = "user_id, status")
+                @Index(name = "idx_account_user_status", columnList = "user_id, status"),
+                @Index(name = "idx_account_hash", columnList = "phone_account", unique = true),  // every txn/balance lookup
+                @Index(name = "idx_account_number", columnList = "account_number")      // existence check on create
         }
 )
 @Audited

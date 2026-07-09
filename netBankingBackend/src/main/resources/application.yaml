@@ -5,16 +5,26 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
+      lettuce:
+        pool:
+          max-active: 50      # max concurrent Redis connections (matches Tomcat max-threads)
+          max-idle: 20        # keep this many warm connections alive
+          min-idle: 10        # pre-warm on startup to avoid cold-start latency
+          max-wait: 2000ms    # fail fast rather than queuing indefinitely
 
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
-      maximum-pool-size: 60       # Keep below local Postgres max_connections
-      minimum-idle: 10            # Warm connections without exhausting Postgres
-      connection-timeout: 10000   # Fail fast instead of waiting 30s under saturation
+      # Little's Law: 100 users × avg ~150ms DB time = ~15 concurrent DB connections.
+      # 30 gives 2× headroom without exhausting Postgres max_connections.
+      maximum-pool-size: 30
+      minimum-idle: 15            # keep 15 warm — avoids new-connection overhead under burst
+      connection-timeout: 8000    # fail fast
       max-lifetime: 1800000
+      idle-timeout: 600000        # 10 min
+      leak-detection-threshold: 5000  # log connections held > 5s (helps diagnose slow queries)
   fraud-datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -36,15 +46,16 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           time_zone: Asia/Kolkata
+          batch_size: 50          # batch INSERTs/UPDATEs — useful for seeder and bulk ops
+          fetch_size: 100         # stream results in chunks rather than loading all at once
+        order_inserts: true       # reorder to maximise batching efficiency
+        order_updates: true
+
 logging:
   level:
-    #    org.hibernate.SQL: DEBUG
-    #    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     com:
       banking:
         netBankingBackend:
-
-
 
 server:
   servlet:
@@ -53,13 +64,14 @@ server:
         same-site: strict
   compression:
     enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+    min-response-size: 1024   # only compress responses > 1KB (avoid overhead on tiny responses)
   tomcat:
     threads:
-      max: 80             # Keep app concurrency aligned with DB pool capacity
-      min-spare: 20       # Minimum threads kept alive
-    accept-count: 50      # Queue briefly instead of allowing huge request pileups
-    connection-timeout: 20000 # Time (ms) Tomcat waits for a client to send the reques
-
+      max: 100            # 1:1 with concurrent users — avoids queueing at the HTTP layer
+      min-spare: 25       # warm thread pool; was 20
+    accept-count: 100     # queue up to 100 additional requests before refusing (was 50)
+    connection-timeout: 20000
 
 jwt:
   secret: ${JWT_SECRET}

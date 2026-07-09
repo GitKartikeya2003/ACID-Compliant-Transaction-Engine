@@ -39,7 +39,7 @@ public class SecurityConfig {
     public AuthenticationProvider authenticationProvider() {
 
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-        provider.setPasswordEncoder(new BCryptPasswordEncoder(12)); //using Bcrypt password encoder
+        provider.setPasswordEncoder(new BCryptPasswordEncoder(10)); //using Bcrypt password encoder (cost=10 balances security and latency)
 
         return provider;
     }

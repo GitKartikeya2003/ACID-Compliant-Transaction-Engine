@@ -37,7 +37,7 @@ public class AccountsServiceImpl implements IAccountsService {
     @Autowired
     private final UserRepository userRepository;
 
-    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
 
 

@@ -29,7 +29,7 @@ public class netBankingService implements INetBankingService {
 
     private final TransferExecutor transferExecutor;
 
-    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
+    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
 
     @Override
@@ -75,7 +75,8 @@ public class netBankingService implements INetBankingService {
             throw new PinNotSetException("Transaction PIN not set for this account");
         }
 
-        if (!encoder.matches(storedPinHash, pin)) {
+        // matches(rawPassword, encodedPassword) — raw user-supplied PIN first, stored bcrypt hash second
+        if (!encoder.matches(pin, storedPinHash)) {
 
             eventPublisher.publishEvent(
                     TransactionPinFailedEvent.builder()
@@ -89,63 +90,7 @@ public class netBankingService implements INetBankingService {
         }
         transferExecutor.executeTransfer(fromAccountNoHash, toAccountHash, transactionDto.getAmount());
 
-//        // --- Now take locks, in a FIXED order, to avoid deadlocks ---
-//        String firstHash = fromAccountNoHash.compareTo(toAccountHash) < 0 ? fromAccountNoHash : toAccountHash;
-//        String secondHash = firstHash.equals(fromAccountNoHash) ? toAccountHash : fromAccountNoHash;
-//
-//        // Scoped to this transaction only — auto-resets on commit/rollback.
-//        entityManager.createNativeQuery("SET LOCAL lock_timeout = '3000'").executeUpdate();
-//
-//        AccountEntity firstLocked = accountsRepository.findByAccountHashForUpdate(firstHash)
-//                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-//        AccountEntity secondLocked = accountsRepository.findByAccountHashForUpdate(secondHash)
-//                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-//
-//        AccountEntity fromAccount = firstHash.equals(fromAccountNoHash) ? firstLocked : secondLocked;
-//        AccountEntity toAccount = firstHash.equals(fromAccountNoHash) ? secondLocked : firstLocked;
-//
-//
-//        entityManager.refresh(fromAccount);
-//
-//        if (toAccount.getStatus() == AccountStatus.FROZEN) {
-//            throw new FrozenAccountException("Receiver Account is Frozen");
-//        }
-//
-//        BigDecimal balanceBefore = fromAccount.getBalance();
-//
-//        log.info("Transfer initiated: amount={} from account={} to account={}",
-//                transactionDto.getAmount(),
-//                transactionDto.getFrom_accountNumber(),
-//                transactionDto.getTo_AccountNumber());
-//
-//        if (fromAccount.getBalance().compareTo(transactionDto.getAmount()) < 0) {
-//            transactionLogService.saveTransaction(fromAccount, toAccount, transactionDto.getAmount(), Status.FAILED);
-//            log.warn("Transfer FAILED: insufficient balance. Account={} has={} requested={}",
-//                    fromAccount.getAccountNumber(), fromAccount.getBalance(), transactionDto.getAmount());
-//
-//            eventPublisher.publishEvent(
-//                    TransactionInsufficientFundsEvent.builder()
-//                            .account(fromAccount)
-//                            .attemptedAmount(transactionDto.getAmount())
-//                            .availableBalance(fromAccount.getBalance())
-//                            .timestamp(LocalDateTime.now())
-//                            .build()
-//            );
-//            throw new InsufficientBalanceException("Insufficient balance");
-//        }
-//
-//        BigDecimal amountToSend = transactionDto.getAmount();
-//        fromAccount.setBalance(fromAccount.getBalance().subtract(amountToSend));
-//        toAccount.setBalance(toAccount.getBalance().add(amountToSend));
-//
-//        transactionLogService.saveTransaction(fromAccount, toAccount, amountToSend, Status.SUCCESS);
-//        eventPublisher.publishEvent(
-//                new TransactionCompletedEvent(fromAccount, amountToSend, balanceBefore, LocalDateTime.now())
-//        );
-//
-//        log.info("Transfer SUCCESS: amount={} from account={} (new balance={}) to account={} (new balance={})",
-//                amountToSend, fromAccount.getAccountNumber(), fromAccount.getBalance(),
-//                toAccount.getAccountNumber(), toAccount.getBalance());
+
     }
 
 }

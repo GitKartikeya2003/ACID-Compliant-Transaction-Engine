@@ -11,9 +11,27 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Performance tuning for 100 concurrent users + 1000 accounts.
+    # Default Postgres config is tuned for minimal RAM; these values are
+    # calibrated for a typical dev machine with 8-16 GB RAM.
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+        -c work_mem=8MB
+        -c maintenance_work_mem=64MB
+        -c max_connections=100
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c synchronous_commit=off
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c max_worker_processes=4
+        -c max_parallel_workers_per_gather=2
+        -c max_parallel_workers=4
     restart: unless-stopped
 
-  postgres-second:
+  postgres-second:    #This is just a sample db for testing purposes
     image: postgres:16
     container_name: secondApp-postgres
     environment:
@@ -31,7 +49,16 @@ services:
     container_name: redisDb
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    # maxmemory-policy: allkeys-lru evicts least-recently-used keys when memory
+    # is full, keeping the hottest accounts in cache automatically.
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --tcp-backlog 511
+        --hz 20
+        --aof-rewrite-incremental-fsync yes
     volumes:
       - redis_data:/data
 

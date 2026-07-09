@@ -33,7 +33,11 @@ public class UserServiceImpl {
     private final AuthenticationManager authenticationManager;
 
 
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    // READ_COMMITTED is sufficient: the unique constraint on email_hash + the
+    // DataIntegrityViolationException catch below handle concurrent duplicate
+    // registrations at the DB level. SERIALIZABLE caused unnecessary lock
+    // escalation and hurt throughput under concurrent load.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void register(UserRegistrationDto userDto) {
         try {
             String email = userDto.getEmail();

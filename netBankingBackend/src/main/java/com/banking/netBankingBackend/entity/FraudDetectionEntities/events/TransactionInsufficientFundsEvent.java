@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
 @Builder
 public class TransactionInsufficientFundsEvent {
 
-    private final AccountEntity account;
+    private final AccountEntity account;          // sender (fromAccount)
+    private final AccountEntity toAccount;        // receiver — needed for async transaction log
     private final BigDecimal attemptedAmount;
     private final BigDecimal availableBalance;
-    private final LocalDateTime timestamp;}
+    private final LocalDateTime timestamp;
+}

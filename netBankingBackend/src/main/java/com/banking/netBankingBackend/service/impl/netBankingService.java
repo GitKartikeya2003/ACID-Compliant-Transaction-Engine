@@ -50,7 +50,8 @@ public class netBankingService implements INetBankingService {
         String toAccountHash = AESUtil.hash(transactionDto.getTo_AccountNumber());
 
 
-        AccountEntity fromAccount = accountsRepository.findByAccountHash(fromAccountNoHash)
+
+        AccountEntity fromAccount = accountsRepository.findByAccountHashWithUser(fromAccountNoHash)
                 .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (fromAccount.getStatus() == AccountStatus.FROZEN) {
@@ -75,7 +76,6 @@ public class netBankingService implements INetBankingService {
             throw new PinNotSetException("Transaction PIN not set for this account");
         }
 
-        // matches(rawPassword, encodedPassword) — raw user-supplied PIN first, stored bcrypt hash second
         if (!encoder.matches(pin, storedPinHash)) {
 
             eventPublisher.publishEvent(

@@ -13,7 +13,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     # Performance tuning for 100 concurrent users + 1000 accounts.
     # Default Postgres config is tuned for minimal RAM; these values are
-    # calibrated for a typical dev machine with 8-16 GB RAM.
     command: >
       postgres
         -c shared_buffers=256MB
@@ -23,7 +22,6 @@ services:
         -c max_connections=100
         -c checkpoint_completion_target=0.9
         -c wal_buffers=16MB
-        -c synchronous_commit=off
         -c random_page_cost=1.1
         -c effective_io_concurrency=200
         -c max_worker_processes=4

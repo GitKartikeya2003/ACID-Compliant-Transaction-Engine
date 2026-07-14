@@ -36,6 +36,8 @@ spring:
       max-lifetime: 1800000
 
   jpa:
+    open-in-view: false    # CRITICAL: prevents the OSIV Session from sharing stale
+                           # entity state across the pre-validation → lock-acquisition boundary
     hibernate:
       ddl-auto: update
     defer-datasource-initialization: true

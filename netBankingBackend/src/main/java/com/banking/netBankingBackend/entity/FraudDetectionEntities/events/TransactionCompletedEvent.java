@@ -12,9 +12,12 @@ import java.time.LocalDateTime;
 @Getter
 @AllArgsConstructor
 public class TransactionCompletedEvent {
-    private final AccountEntity account;              // sender (fromAccount)
-    private final AccountEntity toAccount;            // receiver — needed for async transaction log
+
+    private final Long fromAccountId;
+    private final Long toAccountId;
+
+    private final AccountEntity account;              // fromAccount — for fraud rule reads only
     private final BigDecimal amount;
-    private final BigDecimal balanceBeforeTransfer;   // needed for drain check
+    private final BigDecimal balanceBeforeTransfer;   // needed for account drain check
     private final LocalDateTime occurredAt;
 }

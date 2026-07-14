@@ -61,7 +61,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment("velocity:ACC123456")).thenReturn(3L); // under limit of 5
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -74,7 +74,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment("velocity:ACC123456")).thenReturn(6L); // over limit of 5
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -89,7 +89,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment("velocity:ACC123456")).thenReturn(1L);
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -102,7 +102,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment("velocity:ACC123456")).thenReturn(3L); // not first
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("500"), new BigDecimal("10000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -119,7 +119,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment(anyString())).thenReturn(1L);
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("99999"), new BigDecimal("200000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("99999"), new BigDecimal("200000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -132,7 +132,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment(anyString())).thenReturn(1L);
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("150000"), new BigDecimal("500000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("150000"), new BigDecimal("500000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -145,7 +145,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment(anyString())).thenReturn(1L);
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("100001"), new BigDecimal("500000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("100001"), new BigDecimal("500000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -163,7 +163,7 @@ class FraudDetectionServiceTest {
 
         // Transfer 80% of balance
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("8000"), new BigDecimal("10000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("8000"), new BigDecimal("10000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -177,7 +177,7 @@ class FraudDetectionServiceTest {
 
         // Transfer exactly 90% of balance
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("9000"), new BigDecimal("10000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("9000"), new BigDecimal("10000"), LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -190,7 +190,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment(anyString())).thenReturn(1L);
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("500"), BigDecimal.ZERO, LocalDateTime.now());
+                null, null, account, new BigDecimal("500"), BigDecimal.ZERO, LocalDateTime.now());
 
         fraudDetectionService.onTransferCompleted(event);
 
@@ -314,7 +314,7 @@ class FraudDetectionServiceTest {
         when(valueOperations.increment(startsWith("velocity:"))).thenThrow(new RuntimeException("Redis down"));
 
         TransactionCompletedEvent event = new TransactionCompletedEvent(
-                account, new BigDecimal("200000"), new BigDecimal("500000"), LocalDateTime.now());
+                null, null, account, new BigDecimal("200000"), new BigDecimal("500000"), LocalDateTime.now());
 
         // Should NOT throw — each rule is wrapped in try/catch
         fraudDetectionService.onTransferCompleted(event);

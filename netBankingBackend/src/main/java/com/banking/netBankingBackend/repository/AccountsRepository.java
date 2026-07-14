@@ -16,20 +16,16 @@ import java.util.Optional;
 @Repository
 public interface AccountsRepository extends JpaRepository<AccountEntity, Long>, RevisionRepository<AccountEntity, Long, Integer> {
 
-
-
-
     boolean existsByAccountNumber(String accountNumber);
-
 
     List<AccountEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     Optional<AccountEntity> findByAccountHash(String hashAccount);
 
 
-//    @Lock(LockModeType.PESSIMISTIC_WRITE)
-//    @Query("SELECT a FROM AccountEntity a WHERE a.accountHash = :accountHash")
-//    Optional<AccountEntity> findByAccountHashForUpdate(@Param("accountHash") String accountHash);
+
+    @Query("SELECT a FROM AccountEntity a JOIN FETCH a.user WHERE a.accountHash = :hashAccount")
+    Optional<AccountEntity> findByAccountHashWithUser(@Param("hashAccount") String hashAccount);
 
     boolean existsByAccountHash(String accountHash);
 

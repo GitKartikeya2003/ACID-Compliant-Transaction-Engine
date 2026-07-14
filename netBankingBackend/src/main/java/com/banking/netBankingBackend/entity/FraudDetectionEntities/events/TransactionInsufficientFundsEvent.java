@@ -12,8 +12,12 @@ import java.time.LocalDateTime;
 @Builder
 public class TransactionInsufficientFundsEvent {
 
-    private final AccountEntity account;          // sender (fromAccount)
-    private final AccountEntity toAccount;        // receiver — needed for async transaction log
+    // --- IDs only — resolved to fresh references inside each async listener ---
+    private final Long fromAccountId;
+    private final Long toAccountId;
+
+    // --- Read-only metadata for fraud rules ---
+    private final AccountEntity account;          // fromAccount — for fraud rule reads only
     private final BigDecimal attemptedAmount;
     private final BigDecimal availableBalance;
     private final LocalDateTime timestamp;

@@ -6,8 +6,12 @@ import com.banking.netBankingBackend.entity.FraudDetectionEntities.events.Transa
 import com.banking.netBankingBackend.entity.TransactionEntity;
 import com.banking.netBankingBackend.enums.Status;
 import com.banking.netBankingBackend.repository.TransactionRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -18,82 +22,89 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Persists transaction log entries OUTSIDE the transfer's lock boundary.
- *
- * Previously, saveTransaction() ran inside @Transactional on TransferExecutor,
- * meaning the pessimistic row-locks on both accounts were held for the full
- * duration of the INSERT into the transactions table. Under 100 concurrent users
- * this serialised all transfers through a single lock queue.
- *
- * Now both listeners fire AFTER the transfer transaction commits (or rolls back),
- * so the DB locks are released as soon as the balance update is flushed — before
- * any logging I/O takes place. Each listener opens its own independent
- * REQUIRES_NEW transaction so a logging failure never rolls back the transfer.
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class TransactionLogService {
 
     private final TransactionRepository transactionRepository;
+    private final CacheManager cacheManager;
 
-    /**
-     * Logs a SUCCESSFUL transfer after the transfer transaction commits.
-     * Runs on the dedicated txnLogExecutor thread pool — never on a Tomcat thread.
-     */
+    @PersistenceContext
+    private EntityManager entityManager;
+
+
     @Async("txnLogExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTransferCompleted(TransactionCompletedEvent event) {
         try {
-            saveTransaction(
-                    event.getAccount(),
-                    event.getToAccount(),
-                    event.getAmount(),
-                    Status.SUCCESS
-            );
+            saveTransaction(event.getFromAccountId(), event.getToAccountId(),
+                    event.getAmount(), Status.SUCCESS);
         } catch (Exception e) {
-            log.error("Failed to persist SUCCESS transaction log for account {}: {}",
-                    event.getAccount().getAccountNumber(), e.getMessage(), e);
+            log.error("Failed to persist SUCCESS transaction log: fromId={} toId={} amount={}: {}",
+                    event.getFromAccountId(), event.getToAccountId(), event.getAmount(), e.getMessage(), e);
         }
+
+
+        evictAccountCache(event.getAccount().getAccountNumber());
+        // toAccount's account number requires a fresh DB read here; evict by ID lookup
+        evictAccountCacheById(event.getToAccountId());
     }
 
-    /**
-     * Logs a FAILED transfer (insufficient funds) after the transfer transaction rolls back.
-     * REQUIRES_NEW ensures this write commits even though the outer txn was rolled back.
-     */
+
     @Async("txnLogExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_ROLLBACK)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTransferFailed(TransactionInsufficientFundsEvent event) {
         try {
-            saveTransaction(
-                    event.getAccount(),
-                    event.getToAccount(),
-                    event.getAttemptedAmount(),
-                    Status.FAILED
-            );
+            saveTransaction(event.getFromAccountId(), event.getToAccountId(),
+                    event.getAttemptedAmount(), Status.FAILED);
         } catch (Exception e) {
-            log.error("Failed to persist FAILED transaction log for account {}: {}",
-                    event.getAccount().getAccountNumber(), e.getMessage(), e);
+            log.error("Failed to persist FAILED transaction log: fromId={} toId={} amount={}: {}",
+                    event.getFromAccountId(), event.getToAccountId(), event.getAttemptedAmount(), e.getMessage(), e);
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Internal helper — not called from outside this class any more.
-    // Kept private to prevent callers bypassing the async event pattern.
-    // -----------------------------------------------------------------------
-    private void saveTransaction(AccountEntity from, AccountEntity to,
+
+    private void saveTransaction(Long fromAccountId, Long toAccountId,
                                  BigDecimal amount, Status status) {
+        // getReference() = FK-only proxy; never triggers UPDATE on accounts
+        AccountEntity fromRef = entityManager.getReference(AccountEntity.class, fromAccountId);
+        AccountEntity toRef   = entityManager.getReference(AccountEntity.class, toAccountId);
+
         TransactionEntity txn = new TransactionEntity();
-        txn.setFromAccount(from);
-        txn.setToAccount(to);
+        txn.setFromAccount(fromRef);
+        txn.setToAccount(toRef);
         txn.setBalance(amount);
         txn.setStatus(status);
         txn.setTimestamp(LocalDateTime.now());
         transactionRepository.save(txn);
-        log.debug("Transaction log saved: status={} amount={} from={}", status, amount,
-                from.getAccountNumber());
+
+        log.debug("Transaction log saved: status={} amount={} fromId={} toId={}",
+                status, amount, fromAccountId, toAccountId);
+    }
+
+    private void evictAccountCache(String accountNo) {
+        if (accountNo == null) return;
+        Cache cache = cacheManager.getCache("accounts");
+        if (cache != null) {
+            cache.evict(accountNo);
+        }
+    }
+
+    private void evictAccountCacheById(Long accountId) {
+        // We need the plain-text account number to match the @Cacheable key.
+        // Load a fresh reference — this is a SELECT, but it's on the txnLogExecutor
+        // thread pool, not the Tomcat request thread, so it doesn't add latency.
+        try {
+            AccountEntity toAccount = entityManager.find(AccountEntity.class, accountId);
+            if (toAccount != null) {
+                evictAccountCache(toAccount.getAccountNumber());
+            }
+        } catch (Exception e) {
+            log.warn("Could not evict cache for accountId={}: {}", accountId, e.getMessage());
+        }
     }
 }
